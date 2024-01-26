@@ -1,5 +1,4 @@
-use clickhouse::{Client, Compression};
-
+use clickhouse::{Client, Compression, Row};
 #[tokio::test]
 async fn deferred() {
     let client = prepare_database!();
@@ -55,7 +54,7 @@ async fn deferred_lz4() {
         .unwrap();
 
     #[derive(serde::Serialize, clickhouse::Row)]
-    struct Row {
+    pub struct MyRow {
         no: u32,
     }
 
@@ -64,10 +63,10 @@ async fn deferred_lz4() {
 
     // Due to compression we need more complex test here: write a lot of big parts.
     for i in 0..part_count {
-        let mut insert = client.insert("test").unwrap();
+        let mut insert = client.insert("test", MyRow::COLUMN_NAMES).unwrap();
 
         for j in 0..part_size {
-            let row = Row {
+            let row = MyRow {
                 no: i * part_size + j,
             };
 

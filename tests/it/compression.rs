@@ -21,7 +21,7 @@ async fn check(client: Client) {
         .await
         .unwrap();
 
-    let mut insert = client.insert("test").unwrap();
+    let mut insert = client.insert("test", MyRow::COLUMN_NAMES).unwrap();
     for i in 0..200_000 {
         insert.write(&MyRow { no: i, name: "foo" }).await.unwrap();
     }

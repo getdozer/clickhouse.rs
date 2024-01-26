@@ -1,8 +1,8 @@
+use crate::Serialize;
 use std::{future::Future, marker::PhantomData, mem, panic, pin::Pin, time::Duration};
 
 use bytes::{Bytes, BytesMut};
 use hyper::{self, body, Body, Request};
-use serde::Serialize;
 use tokio::{
     task::JoinHandle,
     time::{Instant, Sleep},
@@ -12,7 +12,6 @@ use url::Url;
 use crate::{
     error::{Error, Result},
     response::Response,
-    row::{self, Row},
     rowbinary, Client, Compression,
 };
 
@@ -55,10 +54,7 @@ macro_rules! timeout {
 }
 
 impl<T> Insert<T> {
-    pub(crate) fn new(client: &Client, table: &str) -> Result<Self>
-    where
-        T: Row,
-    {
+    pub(crate) fn new(client: &Client, table: &str, fields_list: &[&str]) -> Result<Self> {
         let mut url = Url::parse(&client.url).map_err(|err| Error::InvalidParams(err.into()))?;
         let mut pairs = url.query_pairs_mut();
         pairs.clear();
@@ -67,8 +63,8 @@ impl<T> Insert<T> {
             pairs.append_pair("database", database);
         }
 
-        let fields = row::join_column_names::<T>()
-            .expect("the row type must be a struct or a wrapper around it");
+        // let fields = "id,city_id,lang,rec_name,created_at,updated_at".to_string();
+        let fields = fields_list.join(",");
 
         // TODO: what about escaping a table name?
         // https://clickhouse.yandex/docs/en/query_language/syntax/#syntax-identifiers
@@ -178,6 +174,28 @@ impl<T> Insert<T> {
             }
             Ok(())
         }
+    }
+
+    /// Serializes the provided row into an internal buffer.
+    /// Once the buffer is full, it's sent to a background task writing to the socket.
+    ///
+    /// Close to:
+    /// ```ignore
+    /// async fn write<T>(&self, row: &T) -> Result<usize>;
+    /// ```
+    ///
+    /// A returned future doesn't depend on the row's lifetime.
+    ///
+    /// Returns an error if the row cannot be serialized or the background task failed.
+    /// Once failed, the whole `INSERT` is aborted and cannot be used anymore.
+    ///
+    /// # Panics
+    /// If called after previous call returned an error.
+    pub fn write_field<'a>(&'a mut self, f: &T) -> impl Future<Output = Result<()>> + 'a + Send
+    where
+        T: Serialize,
+    {
+        self.write(f)
     }
 
     #[inline(always)]

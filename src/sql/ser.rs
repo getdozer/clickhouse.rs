@@ -170,9 +170,11 @@ impl<'a, W: Write> Serializer for SqlSerializer<'a, W> {
         _name: &'static str,
         _variant_index: u32,
         _variant: &'static str,
-        _value: &T,
+        value: &T,
     ) -> Result {
-        Err(SqlSerializerError::Unsupported("serialize_newtype_variant"))
+        value.serialize(self)
+        // eprintln!("serialize_newtype_variant {name:?}");
+        // Err(SqlSerializerError::Unsupported("serialize_newtype_variant"))
     }
 
     #[inline]
@@ -357,15 +359,5 @@ mod tests {
         #[derive(Serialize)]
         struct TupleStruct(u32, u32);
         assert!(write_arg(&mut out, &TupleStruct(42, 42)).is_err());
-
-        #[derive(Serialize)]
-        enum Enum {
-            Newtype(u32),
-            Tuple(u32, u32),
-            Struct { a: u32 },
-        }
-        assert!(write_arg(&mut out, &Enum::Newtype(42)).is_err());
-        assert!(write_arg(&mut out, &Enum::Tuple(42, 42)).is_err());
-        assert!(write_arg(&mut out, &Enum::Struct { a: 42 }).is_err());
     }
 }

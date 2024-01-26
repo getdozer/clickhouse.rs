@@ -20,7 +20,10 @@ async fn limited_by_rows() {
     let client = prepare_database!();
     create_table(&client).await;
 
-    let mut inserter = client.inserter("test").unwrap().with_max_rows(10);
+    let mut inserter = client
+        .inserter("test", MyRow::COLUMN_NAMES)
+        .unwrap()
+        .with_max_rows(10);
     let rows = 100;
 
     for i in (2..=rows).step_by(2) {
@@ -66,7 +69,10 @@ async fn limited_by_bytes() {
     let client = prepare_database!();
     create_table(&client).await;
 
-    let mut inserter = client.inserter("test").unwrap().with_max_bytes(100);
+    let mut inserter = client
+        .inserter("test", MyRow::COLUMN_NAMES)
+        .unwrap()
+        .with_max_bytes(100);
     let rows = 100;
 
     let row = MyRow {

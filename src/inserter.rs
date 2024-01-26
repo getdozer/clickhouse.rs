@@ -3,7 +3,7 @@ use std::mem;
 use serde::Serialize;
 use tokio::time::Duration;
 
-use crate::{error::Result, insert::Insert, row::Row, ticks::Ticks, Client};
+use crate::{error::Result, insert::Insert, ticks::Ticks, Client};
 
 /// Performs multiple consecutive `INSERT`s.
 ///
@@ -26,6 +26,7 @@ pub struct Inserter<T> {
     ticks: Ticks,
     pending: Quantities,
     in_transaction: bool,
+    field_list: Vec<String>,
 }
 
 /// Statistics about pending or inserted data.
@@ -50,9 +51,9 @@ impl Quantities {
 
 impl<T> Inserter<T>
 where
-    T: Row,
+    T: Serialize,
 {
-    pub(crate) fn new(client: &Client, table: &str) -> Result<Self> {
+    pub(crate) fn new(client: &Client, table: &str, field_list: &[&str]) -> Result<Self> {
         Ok(Self {
             client: client.clone(),
             table: table.into(),
@@ -64,6 +65,7 @@ where
             ticks: Ticks::default(),
             pending: Quantities::ZERO,
             in_transaction: false,
+            field_list: field_list.iter().map(|s| s.to_string()).collect(),
         })
     }
 
@@ -253,7 +255,14 @@ where
         debug_assert!(self.insert.is_none());
         debug_assert_eq!(self.pending, Quantities::ZERO);
 
-        let mut new_insert: Insert<T> = self.client.insert(&self.table)?;
+        let mut new_insert: Insert<T> = self.client.insert(
+            &self.table,
+            self.field_list
+                .iter()
+                .map(|s| s.as_str())
+                .collect::<Vec<&str>>()
+                .as_slice(),
+        )?;
         new_insert.set_timeouts(self.send_timeout, self.end_timeout);
         self.insert = Some(new_insert);
         Ok(())

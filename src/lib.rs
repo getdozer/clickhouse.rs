@@ -16,6 +16,7 @@ pub use clickhouse_derive::Row;
 
 pub use self::{compression::Compression, row::Row};
 use self::{error::Result, http_client::HttpClient};
+use ::serde::Serialize;
 
 pub mod error;
 pub mod insert;
@@ -172,13 +173,21 @@ impl Client {
     ///
     /// # Panics
     /// If `T` has unnamed fields, e.g. tuples.
-    pub fn insert<T: Row>(&self, table: &str) -> Result<insert::Insert<T>> {
-        insert::Insert::new(self, table)
+    pub fn insert<T: Serialize>(
+        &self,
+        table: &str,
+        fields_list: &[&str],
+    ) -> Result<insert::Insert<T>> {
+        insert::Insert::new(self, table, fields_list)
     }
 
     /// Creates an inserter to perform multiple INSERTs.
-    pub fn inserter<T: Row>(&self, table: &str) -> Result<inserter::Inserter<T>> {
-        inserter::Inserter::new(self, table)
+    pub fn inserter<T: Serialize>(
+        &self,
+        table: &str,
+        fields_list: &[&str],
+    ) -> Result<inserter::Inserter<T>> {
+        inserter::Inserter::new(self, table, fields_list)
     }
 
     /// Starts a new SELECT/DDL query.

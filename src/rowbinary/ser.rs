@@ -126,9 +126,12 @@ impl<'a, B: BufMut> Serializer for &'a mut RowBinarySerializer<B> {
         _name: &'static str,
         _variant_index: u32,
         _variant: &'static str,
-        _value: &T,
+        value: &T,
     ) -> Result<()> {
-        todo!();
+        // match value {
+        //
+        // }
+        value.serialize(self)
     }
 
     #[inline]
