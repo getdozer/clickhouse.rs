@@ -10,6 +10,7 @@ use crate::{
     sql::{Bind, SqlBuilder},
     Client,
 };
+use crate::cell_cursor::CellBinaryCursor;
 
 const MAX_QUERY_LEN_TO_USE_GET: usize = 8192;
 
@@ -86,6 +87,14 @@ impl Query {
             Ok(None) => Err(Error::RowNotFound),
             Err(err) => Err(err),
         }
+    }
+
+    pub fn fetch_cell_cursor(mut self) -> Result<CellCursor> {
+        // self.sql.bind_fields::<T>();
+        self.sql.append(" FORMAT RowBinary");
+
+        let response = self.do_execute(true)?;
+        Ok(CellCursor(CellBinaryCursor::new(response)))
     }
 
     /// Executes the query and returns at most one row.
@@ -183,6 +192,17 @@ impl<T> RowCursor<T> {
     pub async fn next<'a, 'b: 'a>(&'a mut self) -> Result<Option<T>>
     where
         T: Deserialize<'b>,
+    {
+        self.0.next().await
+    }
+}
+
+pub struct CellCursor(CellBinaryCursor);
+
+impl CellCursor {
+    pub async fn next<'a, 'b: 'a, T>(&'a mut self) -> Result<Option<T>>
+        where
+            T: Deserialize<'b>,
     {
         self.0.next().await
     }

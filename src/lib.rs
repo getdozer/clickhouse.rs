@@ -37,6 +37,7 @@ mod response;
 mod row;
 mod rowbinary;
 mod ticks;
+mod cell_cursor;
 
 const TCP_KEEPALIVE: Duration = Duration::from_secs(60);
 
